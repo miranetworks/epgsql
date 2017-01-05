@@ -77,8 +77,11 @@ handle_cast({send, Data}, State) ->
     ok = Mod:send(Sock, Data),
     {noreply, State};
 
-handle_cast({cancel, Pid, Key}, State) ->
-    {ok, {Addr, Port}} = inet:peername(State#state.sock),
+handle_cast({cancel, Pid, Key}, State = #state{sock = Sock0}) ->
+    case is_port(Sock0) of
+        true -> {ok, {Addr, Port}} = inet:peername(Sock0);
+        false -> {ok, {Addr, Port}} = ssl:peername(Sock0)
+    end,
     SockOpts = [{active, false}, {packet, raw}, binary],
     {ok, Sock} = gen_tcp:connect(Addr, Port, SockOpts),
     Msg = <<16:?int32, 80877102:?int32, Pid:?int32, Key:?int32>>,
